@@ -21,6 +21,7 @@ import android.view.View
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import com.duckduckgo.app.browser.model.BasicAuthenticationRequest
+import com.duckduckgo.app.global.exception.PasswordManagerEntity
 import com.duckduckgo.app.trackerdetection.model.TrackingEvent
 
 interface WebViewClientListener {
@@ -42,4 +43,5 @@ interface WebViewClientListener {
     fun externalAppLinkClicked(appLink: SpecialUrlDetector.UrlType.IntentType)
 
     fun requiresAuthentication(request: BasicAuthenticationRequest)
+    fun showPrompt(passwordManagerEntity: PasswordManagerEntity)
 }

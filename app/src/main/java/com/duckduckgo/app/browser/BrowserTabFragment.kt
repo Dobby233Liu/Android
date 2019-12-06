@@ -45,9 +45,11 @@ import android.widget.TextView
 import androidx.annotation.AnyThread
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
+import androidx.biometric.BiometricPrompt
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
 import androidx.core.content.pm.ShortcutManagerCompat
+import androidx.core.hardware.fingerprint.FingerprintManagerCompat
 import androidx.core.view.isEmpty
 import androidx.core.view.isNotEmpty
 import androidx.core.view.isVisible
@@ -78,6 +80,8 @@ import com.duckduckgo.app.cta.ui.CtaConfiguration
 import com.duckduckgo.app.cta.ui.CtaViewModel
 import com.duckduckgo.app.global.ViewModelFactory
 import com.duckduckgo.app.global.device.DeviceInfo
+import com.duckduckgo.app.global.exception.PasswordManagerDao
+import com.duckduckgo.app.global.exception.PasswordManagerEntity
 import com.duckduckgo.app.global.view.*
 import com.duckduckgo.app.privacy.model.PrivacyGrade
 import com.duckduckgo.app.privacy.renderer.icon
@@ -130,6 +134,9 @@ class BrowserTabFragment : Fragment(), FindListener, CoroutineScope {
 
     @Inject
     lateinit var fileDownloader: FileDownloader
+
+    @Inject
+    lateinit var passwordManagerDao: PasswordManagerDao
 
     @Inject
     lateinit var fileDownloadNotificationManager: FileDownloadNotificationManager
@@ -246,6 +253,9 @@ class BrowserTabFragment : Fragment(), FindListener, CoroutineScope {
         configureKeyboardAwareLogoAnimation()
         configureShowTabSwitcherListener()
         configureLongClickOpensNewTabListener()
+
+        //val test = MyJavaScriptInterface(requireContext(), this, passwordManagerDao)
+        //test.processHTML("test", "pass")
 
         if (savedInstanceState == null) {
             viewModel.onViewReady()
@@ -481,7 +491,67 @@ class BrowserTabFragment : Fragment(), FindListener, CoroutineScope {
             is Command.SaveCredentials -> saveBasicAuthCredentials(it.request, it.credentials)
             is Command.GenerateWebViewPreviewImage -> generateWebViewPreviewImage()
             is Command.LaunchTabSwitcher -> launchTabSwitcher()
+            is Command.ShowPrompt -> showPrompt(it.entity)
         }
+    }
+
+    fun showPrompt(entity: PasswordManagerEntity) {
+        val callback: BiometricPrompt.AuthenticationCallback = object : BiometricPrompt.AuthenticationCallback() {
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                super.onAuthenticationError(errorCode, errString)
+                Timber.d("MARCOS authentication error")
+            }
+
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                Timber.d("MARCOS authentication succeded ${entity.username} and ${entity.password}")
+                val sb = StringBuilder()
+                sb.append("var formxxx = document.getElementsByTagName('form')[0];")
+                sb.append("if(!(formxxx === undefined || formxxx === null)){")
+                sb.append("    var objPWD, objAccount;var str = '';")
+                sb.append("    var inputs = document.getElementsByTagName('input');")
+                sb.append("    for (var i = 0; i < inputs.length; i++) {")
+                sb.append("        if (inputs[i].name.toLowerCase().includes('pass')) {objPWD = inputs[i];}")
+                sb.append("        else if (inputs[i].name.toLowerCase().includes('email')) {objAccount = inputs[i];}")
+                sb.append("        else if (inputs[i].name.toLowerCase().includes('user')) {objAccount = inputs[i];}")
+                sb.append("        if (inputs[i].id.toLowerCase().includes('pass')) {objPWD = inputs[i];}")
+                sb.append("        else if (inputs[i].id.toLowerCase().includes('email')) {objAccount = inputs[i];}")
+                sb.append("        else if (inputs[i].id.toLowerCase().includes('user')) {objAccount = inputs[i];}")
+                sb.append("    }")
+//                sb.append("    var buttons = formxxx.getElementsByTagName('button');")
+//                sb.append("    for (var i = 0; i < buttons.length; i++) {")
+//                sb.append("        if (buttons[i].innerHTML.toLowerCase().includes('login')) {")
+//                sb.append("            alert(1234);")
+//                sb.append("            buttons[i].classList.remove('tw-core-button--disabled');")
+//                sb.append("        }")
+//                sb.append("    }")
+                sb.append("    if (objAccount != null) {objAccount.value = '${entity.username}';}")
+                sb.append("    if (objPWD != null) { objPWD.value = '${entity.password}';}")
+                sb.append("    formxxx.submit()")
+                sb.append("}")
+                //webView?.loadUrl(initialUrl)
+                webView?.evaluateJavascript("javascript:$sb", null)
+            }
+
+            override fun onAuthenticationFailed() {
+                super.onAuthenticationFailed()
+                Timber.d("MARCOS authentication failed")
+            }
+        }
+
+        val promptInfo = buildBiometricPrompt()
+        val biometricPrompt = BiometricPrompt(this, ContextCompat.getMainExecutor(context), callback)
+        biometricPrompt.authenticate(promptInfo)
+    }
+
+    private fun buildBiometricPrompt(): BiometricPrompt.PromptInfo {
+        return BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Daxword Manager")
+            .setSubtitle("Sign In with your finger print")
+            .setDescription("Use your finger print and we will sign you in automatically")
+            .setNegativeButtonText("Cancel")
+            .build()
     }
 
     private fun generateWebViewPreviewImage() {
@@ -748,6 +818,8 @@ class BrowserTabFragment : Fragment(), FindListener, CoroutineScope {
                 }
                 false
             }
+
+            it.addJavascriptInterface(MyJavaScriptInterface(requireContext(), this, passwordManagerDao), "MYOBJECT")
 
             registerForContextMenu(it)
 
@@ -1308,4 +1380,65 @@ class BrowserTabFragment : Fragment(), FindListener, CoroutineScope {
         private fun shouldUpdateOmnibarTextInput(viewState: OmnibarViewState, omnibarInput: String?) =
             (!viewState.isEditing || omnibarInput.isNullOrEmpty()) && omnibarTextInput.isDifferent(omnibarInput)
     }
+}
+
+class MyJavaScriptInterface(val context: Context, val fragment: Fragment, val passwordManagerDao: PasswordManagerDao) {
+    private var biometricPrompt: BiometricPrompt? = null
+
+    var user: String? = null
+    var password: String? = null
+    var url: String? = null
+
+    @JavascriptInterface
+    fun processHTML(user: String, password: String, url: String) {
+        Timber.d("Marcos SUPER BOLD!")
+        this.user = user
+        this.password = password
+        this.url = url
+
+        val test = passwordManagerDao.getPassword("$url")
+        if (test == null) {
+            val promptInfo = buildBiometricPrompt()
+            if (biometricPrompt == null) {
+                biometricPrompt = BiometricPrompt(fragment, ContextCompat.getMainExecutor(context), callback)
+            }
+            biometricPrompt?.authenticate(promptInfo)
+        }
+    }
+
+    fun storeCredentials() {
+        val pass = PasswordManagerEntity(password = password!!, username = user!!, website = url!!)
+        GlobalScope.launch {
+            passwordManagerDao.add(pass)
+        }
+    }
+
+    private fun buildBiometricPrompt(): BiometricPrompt.PromptInfo {
+        return BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Daxword Manager")
+            .setSubtitle("Store your credentials")
+            .setDescription("We can store your credentials so the next time you visit this website you can easily sign back in. To store them, just use your finger print.")
+            .setNegativeButtonText("Cancel")
+            .build()
+    }
+
+    private val callback: BiometricPrompt.AuthenticationCallback = object : BiometricPrompt.AuthenticationCallback() {
+
+        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+            super.onAuthenticationError(errorCode, errString)
+            Timber.d("MARCOS authentication error")
+        }
+
+        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+            super.onAuthenticationSucceeded(result)
+            Timber.d("MARCOS authentication succeded")
+            storeCredentials()
+        }
+
+        override fun onAuthenticationFailed() {
+            super.onAuthenticationFailed()
+            Timber.d("MARCOS authentication failed")
+        }
+    }
+
 }

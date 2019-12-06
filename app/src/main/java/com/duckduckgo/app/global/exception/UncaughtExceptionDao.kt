@@ -61,3 +61,14 @@ class UncaughtExceptionSourceConverter {
     fun convertFromDb(value: String): UncaughtExceptionSource? = UncaughtExceptionSource.valueOf(value)
 
 }
+
+@Dao
+abstract class PasswordManagerDao {
+
+    @Insert
+    abstract fun add(passwordManager: PasswordManagerEntity)
+
+    @Query("SELECT * FROM PasswordManagerEntity WHERE website like :query")
+    abstract fun getPassword(query: String): PasswordManagerEntity?
+
+}

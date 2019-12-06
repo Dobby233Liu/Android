@@ -145,6 +145,7 @@ dependencies {
     implementation "com.jakewharton.timber:timber:$timber"
     implementation "com.google.dagger:dagger-android:$dagger"
     implementation "com.google.dagger:dagger-android-support:$dagger"
+    implementation 'androidx.biometric:biometric:1.0.0'
 
     // RxRelay
     implementation "com.jakewharton.rxrelay2:rxrelay:$rxRelay"

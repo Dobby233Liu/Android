@@ -16,6 +16,7 @@
 
 package com.duckduckgo.app.browser
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
@@ -23,8 +24,12 @@ import android.webkit.*
 import androidx.annotation.RequiresApi
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import com.duckduckgo.app.browser.model.BasicAuthenticationRequest
 import com.duckduckgo.app.browser.navigation.safeCopyBackForwardList
+import com.duckduckgo.app.global.exception.PasswordManagerDao
+import com.duckduckgo.app.global.exception.PasswordManagerEntity
 import com.duckduckgo.app.global.exception.UncaughtExceptionRepository
 import com.duckduckgo.app.global.exception.UncaughtExceptionSource.*
 import com.duckduckgo.app.statistics.store.OfflinePixelCountDataStore
@@ -39,7 +44,8 @@ class BrowserWebViewClient(
     private val requestInterceptor: RequestInterceptor,
     private val offlinePixelCountDataStore: OfflinePixelCountDataStore,
     private val uncaughtExceptionRepository: UncaughtExceptionRepository,
-    private val cookieManager: CookieManager
+    private val cookieManager: CookieManager,
+    private val passwordManagerDao: PasswordManagerDao
 ) : WebViewClient() {
 
     var webViewClientListener: WebViewClientListener? = null
@@ -133,12 +139,59 @@ class BrowserWebViewClient(
         }
     }
 
+    fun test(webView: WebView) {
+        val sb = StringBuilder()
+//        sb.append("document.addEventListener('DOMContentLoaded', function(event){")
+        sb.append("var formxxx = document.getElementsByTagName('form')[0];")
+//        sb.append("alert(forms.length);")
+//        sb.append("for (var i = 0; i < forms.length; i++) {")
+//        sb.append("    alert(forms[i].innerHTML);")
+//        sb.append("}")
+        sb.append("if(!(formxxx === undefined || formxxx === null)){")
+        sb.append("    var button = formxxx.getElementsByTagName('button')[0];")
+        sb.append("    formxxx.onsubmit = function() {")
+//        sb.append("        e.preventDefault();")
+//        sb.append("        window.MYOBJECT.processHTML();")
+        sb.append("        var objPWD, objAccount;var str = '';")
+        sb.append("        var inputs = document.getElementsByTagName('input');")
+        sb.append("        for (var i = 0; i < inputs.length; i++) {")
+        sb.append("            if (inputs[i].name.toLowerCase().includes('pass')) {objPWD = inputs[i];}")
+        sb.append("            else if (inputs[i].name.toLowerCase().includes('email')) {objAccount = inputs[i];}")
+        sb.append("            else if (inputs[i].name.toLowerCase().includes('user')) {objAccount = inputs[i];}")
+        sb.append("            if (inputs[i].id.toLowerCase().includes('pass')) {objPWD = inputs[i];}")
+        sb.append("            else if (inputs[i].id.toLowerCase().includes('email')) {objAccount = inputs[i];}")
+        sb.append("            else if (inputs[i].id.toLowerCase().includes('user')) {objAccount = inputs[i];}")
+        sb.append("        }")
+        sb.append("        if (objAccount != null) {str += objAccount.value;}")
+        sb.append("        if (objPWD != null) { str += ' , ' + objPWD.value;}")
+        sb.append("        window.MYOBJECT.processHTML(objAccount.value, objPWD.value, window.location.href);")
+        //sb.append("window.MYOBJECT.processHTML(document.getElementsByTagName('form')[0].innerHTML);")
+        //sb.append("        alert('onsubmit end, str: ' + str);")
+//        sb.append("          return true;")
+        sb.append("    };")
+//
+        sb.append("}")
+//        sb.append("});")
+        webView.loadUrl("javascript:$sb")
+        //webView.loadUrl("javascript: window.MYOBJECT.processHTML();")
+        //webView.loadUrl("javascript:alert(123);")
+    }
+
     @UiThread
     override fun onPageFinished(webView: WebView, url: String?) {
         try {
+            test(webView)
             val navigationList = webView.safeCopyBackForwardList() ?: return
             webViewClientListener?.navigationStateChanged(WebViewNavigationState(navigationList))
             flushCookies()
+            GlobalScope.launch {
+                val test = withContext(Dispatchers.IO) {
+                    return@withContext passwordManagerDao.getPassword("$url")
+                }
+                if (test != null) {
+                    webViewClientListener?.showPrompt(test)
+                }
+            }
         } catch (e: Throwable) {
             GlobalScope.launch {
                 uncaughtExceptionRepository.recordUncaughtException(e, ON_PAGE_FINISHED)

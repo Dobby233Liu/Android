@@ -54,6 +54,7 @@ import com.duckduckgo.app.cta.ui.CtaViewModel
 import com.duckduckgo.app.global.*
 import com.duckduckgo.app.global.db.AppConfigurationDao
 import com.duckduckgo.app.global.db.AppConfigurationEntity
+import com.duckduckgo.app.global.exception.PasswordManagerEntity
 import com.duckduckgo.app.global.model.Site
 import com.duckduckgo.app.global.model.SiteFactory
 import com.duckduckgo.app.global.model.domainMatchesUrl
@@ -182,6 +183,7 @@ class BrowserTabViewModel(
         class SaveCredentials(val request: BasicAuthenticationRequest, val credentials: BasicAuthenticationCredentials) : Command()
         object GenerateWebViewPreviewImage : Command()
         object LaunchTabSwitcher : Command()
+        class ShowPrompt(val entity: PasswordManagerEntity) : Command()
     }
 
     val autoCompleteViewState: MutableLiveData<AutoCompleteViewState> = MutableLiveData()
@@ -315,6 +317,10 @@ class BrowserTabViewModel(
         }
 
         pixel.fire(pixelName, params)
+    }
+
+    override fun showPrompt(passwordManagerEntity: PasswordManagerEntity) {
+        command.postValue(ShowPrompt(passwordManagerEntity))
     }
 
     fun onUserSubmittedQuery(input: String) {

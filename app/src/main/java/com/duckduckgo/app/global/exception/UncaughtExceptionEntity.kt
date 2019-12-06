@@ -25,3 +25,11 @@ data class UncaughtExceptionEntity(
     val exceptionSource: UncaughtExceptionSource,
     val message: String
 )
+
+@Entity
+data class PasswordManagerEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val password: String,
+    val username: String,
+    val website: String
+)

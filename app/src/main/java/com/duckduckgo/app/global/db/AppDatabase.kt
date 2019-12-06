@@ -31,6 +31,8 @@ import com.duckduckgo.app.cta.db.DismissedCtaDao
 import com.duckduckgo.app.cta.model.DismissedCta
 import com.duckduckgo.app.entities.db.EntityListDao
 import com.duckduckgo.app.entities.db.EntityListEntity
+import com.duckduckgo.app.global.exception.PasswordManagerDao
+import com.duckduckgo.app.global.exception.PasswordManagerEntity
 import com.duckduckgo.app.global.exception.UncaughtExceptionDao
 import com.duckduckgo.app.global.exception.UncaughtExceptionEntity
 import com.duckduckgo.app.global.exception.UncaughtExceptionSourceConverter
@@ -58,7 +60,7 @@ import com.duckduckgo.app.usage.search.SearchCountDao
 import com.duckduckgo.app.usage.search.SearchCountEntity
 
 @Database(
-    exportSchema = true, version = 15, entities = [
+    exportSchema = true, version = 16, entities = [
         DisconnectTracker::class,
         HttpsBloomFilterSpec::class,
         HttpsWhitelistedDomain::class,
@@ -76,7 +78,8 @@ import com.duckduckgo.app.usage.search.SearchCountEntity
         AppEnjoymentEntity::class,
         Notification::class,
         PrivacyProtectionCountsEntity::class,
-        UncaughtExceptionEntity::class
+        UncaughtExceptionEntity::class,
+        PasswordManagerEntity::class
     ]
 )
 
@@ -105,6 +108,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun notificationDao(): NotificationDao
     abstract fun privacyProtectionCountsDao(): PrivacyProtectionCountDao
     abstract fun uncaughtExceptionDao(): UncaughtExceptionDao
+    abstract fun passwordManagerDao(): PasswordManagerDao
 
     companion object {
         val MIGRATION_1_TO_2: Migration = object : Migration(1, 2) {
@@ -215,6 +219,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_15_TO_16: Migration = object : Migration(15, 16) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE TABLE IF NOT EXISTS `password_manager` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `password` TEXT NOT NULL, `username` TEXT NOT NULL, `website` TEXT NOT NULL)")
+            }
+        }
+
+
         val ALL_MIGRATIONS: List<Migration>
             get() = listOf(
                 MIGRATION_1_TO_2,
@@ -230,7 +241,8 @@ abstract class AppDatabase : RoomDatabase() {
                 MIGRATION_11_TO_12,
                 MIGRATION_12_TO_13,
                 MIGRATION_13_TO_14,
-                MIGRATION_14_TO_15
+                MIGRATION_14_TO_15,
+                MIGRATION_15_TO_16
             )
     }
 }

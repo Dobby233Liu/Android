@@ -33,6 +33,9 @@ class DaoModule {
     fun providesDisconnectTrackDao(database: AppDatabase) = database.trackerDataDao()
 
     @Provides
+    fun providesPasswordManagerDao(database: AppDatabase) = database.passwordManagerDao()
+
+    @Provides
     fun providesNetworkLeaderboardDao(database: AppDatabase) = database.networkLeaderboardDao()
 
     @Provides

@@ -34,6 +34,7 @@ import com.duckduckgo.app.browser.tabpreview.WebViewPreviewPersister
 import com.duckduckgo.app.fire.DuckDuckGoCookieManager
 import com.duckduckgo.app.fire.WebViewCookieManager
 import com.duckduckgo.app.global.AppUrl
+import com.duckduckgo.app.global.exception.PasswordManagerDao
 import com.duckduckgo.app.global.exception.UncaughtExceptionRepository
 import com.duckduckgo.app.global.file.FileDeleter
 import com.duckduckgo.app.global.install.AppInstallStore
@@ -69,7 +70,8 @@ class BrowserModule {
         requestInterceptor: RequestInterceptor,
         offlinePixelCountDataStore: OfflinePixelCountDataStore,
         uncaughtExceptionRepository: UncaughtExceptionRepository,
-        cookieManager: CookieManager
+        cookieManager: CookieManager,
+        passwordManagerDao: PasswordManagerDao
     ): BrowserWebViewClient {
         return BrowserWebViewClient(
             requestRewriter,
@@ -77,7 +79,8 @@ class BrowserModule {
             requestInterceptor,
             offlinePixelCountDataStore,
             uncaughtExceptionRepository,
-            cookieManager
+            cookieManager,
+            passwordManagerDao
         )
     }
 
