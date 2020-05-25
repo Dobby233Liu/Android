@@ -14,6 +14,6 @@ jobs:
       with:
         java-version: 1.8
     - name: setup env, part 2
-      run: ./install_tools.sh
+      run: sudo bash ./install_tools.sh
     - name: Build with Gradle
       run: ./gradlew build
