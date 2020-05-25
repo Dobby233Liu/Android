@@ -10,4 +10,4 @@ echo "Fetching ndk-bundle. Suppressing output to avoid travis 4MG size limit";
 sudo /usr/local/lib/android/sdk/tools/bin/sdkmanager "ndk-bundle" >/dev/null;
 echo "Fetching ndk-bundle complete";
 sudo /usr/local/lib/android/sdk/tools/bin/sdkmanager "system-images;android-22;default;armeabi-v7a";
-yes | sdkmanager --licenses;
+yes | /usr/local/lib/android/sdk/tools/bin/sdkmanager --licenses;
