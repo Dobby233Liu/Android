@@ -18,11 +18,11 @@ jobs:
     - name: setup env, part 2
       run: sudo bash ./install_tools.sh
     - name: Build with Gradle
-      run: ./gradlew build
+      run: ./gradlew assembleDebug
     - name: deploy
       uses: actions/upload-artifact@v2
       with:
         # Artifact name
         name: android
         # A file, directory or wildcard pattern that describes what to upload
-        path: app/build/apk
+        path: app/build/outputs/apk
